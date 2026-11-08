@@ -2,6 +2,8 @@ package com.example.cubomgicoapp;
 
 import android.graphics.Color;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
 import android.widget.Button;
 import android.widget.TextView;
 
@@ -20,6 +22,7 @@ public class MainActivity extends AppCompatActivity {
     private Timer timer;
     private TimerTask tarefa;
     private Boolean cronometoParado;
+    private Boolean usuarioPressionouTela;
     private TextView cronometroText;
     private static int miliSegundos;
 
@@ -38,28 +41,46 @@ public class MainActivity extends AppCompatActivity {
 
         cronometroText = findViewById(R.id.text_cronometro);
         cronometoParado = Boolean.TRUE;
+        usuarioPressionouTela = Boolean.FALSE;
+
         miliSegundos = 0;
 
         ConstraintLayout telaPrincipal = findViewById(R.id.main);
 
         telaPrincipal.setOnLongClickListener(view -> {
-            cronometroText.setTextColor(Color.GREEN);
-            cronometroText.setText(String.format("00:0"));
-            pararCronometro();
+            if (cronometoParado) {
+                usuarioPressionouTela = Boolean.TRUE;
+                cronometroText.setTextColor(Color.GREEN);
+                cronometroText.setText("0.00");
+            }
             return false;
         });
 
         telaPrincipal.setOnClickListener( view -> {
-            if (cronometoParado) {
-                iniciarCronometro();
+            if (cronometoParado){
+
+                if (usuarioPressionouTela){
+                    iniciarCronometro();
             }else {
+                    cronometroText.setTextColor(Color.RED);
+                }
+            }else {
+            usuarioPressionouTela = Boolean.FALSE;
                 pararCronometro();
             }
-            cronometroText.setTextColor(Color.WHITE);
+
+            //Após um tempo ele volta o texto para a cor branca
+            new Handler(Looper.getMainLooper()).postDelayed(new Runnable() {
+                @Override
+                public void run() {
+                    cronometroText.setTextColor(Color.WHITE);
+                }
+            }, 100);
         });
     }
 
     public void iniciarCronometro(){
+        miliSegundos = 0;
         cronometoParado = Boolean.FALSE;
         timer = new Timer();
         tarefa = new TimerTask() {
@@ -67,16 +88,9 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void run() {
                 miliSegundos++;
-                int miliSeg = miliSegundos % 100;
-                int seg = (miliSegundos / 100) % 60;
-                int min =  miliSegundos / 6000;
 
                 runOnUiThread(() -> {
-                    if (min < 1) {
-                        cronometroText.setText(String.format("%02d:%01d", seg, miliSeg / 10));
-                    } else {
-                        cronometroText.setText(String.format("%02d:%02d:%01d", min, seg, miliSeg / 10));
-                    }
+                    imprimirTempo(miliSegundos);
                 });
             }
         };
@@ -85,12 +99,27 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public void pararCronometro(){
-        cronometoParado = Boolean.TRUE;
-        miliSegundos = 0;
         if (timer != null) {
+                cronometoParado = Boolean.TRUE;
                 timer.cancel();
                 timer = null;
+
+                imprimirTempo(miliSegundos);
             }
+    }
+
+    public void imprimirTempo(int miliSegundos){
+        int miliSeg = miliSegundos % 100;
+        int seg = (miliSegundos / 100) % 60;
+        int min =  miliSegundos / 6000;
+
+        miliSeg = (cronometoParado) ? miliSeg : miliSeg/10; //Se o cronometo está parado ele mostrará 0.00 se não sera mostrado 0.0
+
+        if (min < 1) {
+            cronometroText.setText(String.format("%01d.%01d", seg, miliSeg));
+        } else {
+            cronometroText.setText(String.format("%01d.%01d.%01d", min, seg, miliSeg));
+        }
     }
 
 
